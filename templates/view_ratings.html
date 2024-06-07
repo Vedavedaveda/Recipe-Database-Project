@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Ratings for {{ recipe.name }}</h2>
+    <ul>
+        {% for rating in ratings %}
+            <li>{{ rating.user.username }}: {{ rating.rating }} star{{ 's' if rating.rating != 1 else '' }}</li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('recipe', recipe_id=recipe.id) }}">Back to Recipe</a>
+{% endblock %}

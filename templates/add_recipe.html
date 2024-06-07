@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Add Recipe</h2>
+    <form id="recipe-form" action="{{ url_for('add_recipe') }}" method="post">
+        <label for="name">Recipe Name:</label>
+        <input type="text" id="name" name="name" required autocomplete="off">
+        <div class="input-row">
+            <div class="input-group">
+                <label for="dish_category">Dish Category:</label>
+                <input type="text" id="dish_category" name="dish_category" required autocomplete="off">
+                <ul class="suggestions-list" id="category-suggestions"></ul>
+            </div>
+            <div class="input-group">
+                <label for="cuisine">Cuisine:</label>
+                <input type="text" id="cuisine" name="cuisine" required autocomplete="off">
+                <ul class="suggestions-list" id="cuisine-suggestions"></ul>
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="cooking_time_hours">Cooking Time:</label>
+                <input type="number" id="cooking_time_hours" name="cooking_time_hours" placeholder="Hours" min="0" required autocomplete="off">
+                <input type="number" id="cooking_time_minutes" name="cooking_time_minutes" placeholder="Minutes" min="0" max="59" required autocomplete="off">
+            </div>
+        </div>
+        <label for="user_id">Posted By:</label>
+        <select id="user_id" name="user_id" required autocomplete="off">
+            {% for user in users %}
+                <option value="{{ user.username }}">{{ user.name }}</option>
+            {% endfor %}
+        </select>
+        
+        <h3>Ingredients</h3>
+        <div id="ingredients-list">
+            <div class="ingredient-entry">
+                <div class="ingredient-row">
+                    <input type="text" class="ingredient-name" name="ingredient_name" placeholder="Ingredient name" required autocomplete="off">
+                    <input type="text" class="ingredient-amount" name="ingredient_amount" placeholder="Amount" required autocomplete="off">
+                    <button type="button" class="remove-ingredient small-button">-</button>
+                    <button type="button" class="add-ingredient small-button">+</button>
+                </div>
+                <ul class="suggestions-list"></ul>
+            </div>
+        </div>
+
+        <h3>Recipe Steps</h3>
+        <div id="steps-list">
+            <div class="step-entry">
+                <div class="step-row">
+                    <span class="step-number">1.</span>
+                    <textarea class="step-description" name="step_description" placeholder="Step description" required></textarea>
+                    <button type="button" class="remove-step small-button">-</button>
+                    <button type="button" class="add-step small-button">+</button>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit">Add Recipe</button>
+    </form>
+
+    <script>
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('add-ingredient')) {
+                const ingredientEntry = document.createElement('div');
+                ingredientEntry.className = 'ingredient-entry';
+                ingredientEntry.innerHTML = `
+                    <div class="ingredient-row">
+                        <input type="text" class="ingredient-name" name="ingredient_name" placeholder="Ingredient name" required autocomplete="off">
+                        <input type="text" class="ingredient-amount" name="ingredient_amount" placeholder="Amount" required autocomplete="off">
+                        <button type="button" class="remove-ingredient small-button">-</button>
+                        <button type="button" class="add-ingredient small-button">+</button>
+                    </div>
+                    <ul class="suggestions-list"></ul>
+                `;
+                document.getElementById('ingredients-list').appendChild(ingredientEntry);
+            }
+
+            if (e.target.classList.contains('remove-ingredient')) {
+                e.target.parentElement.parentElement.remove();
+            }
+
+            if (e.target.classList.contains('add-step')) {
+                const stepsList = document.getElementById('steps-list');
+                const stepEntries = stepsList.getElementsByClassName('step-entry');
+                const stepNumber = stepEntries.length + 1;
+                const stepEntry = document.createElement('div');
+                stepEntry.className = 'step-entry';
+                stepEntry.innerHTML = `
+                    <div class="step-row">
+                        <span class="step-number">${stepNumber}.</span>
+                        <textarea class="step-description" name="step_description" placeholder="Step description" required></textarea>
+                        <button type="button" class="remove-step small-button">-</button>
+                        <button type="button" class="add-step small-button">+</button>
+                    </div>
+                `;
+                stepsList.appendChild(stepEntry);
+            }
+
+            if (e.target.classList.contains('remove-step')) {
+                e.target.parentElement.parentElement.remove();
+                updateStepNumbers();
+            }
+        });
+
+        function updateStepNumbers() {
+            const stepsList = document.getElementById('steps-list');
+            const stepNumbers = stepsList.getElementsByClassName('step-number');
+            for (let i = 0; i < stepNumbers.length; i++) {
+                stepNumbers[i].textContent = (i + 1) + '.';
+            }
+        }
+
+        // Function to fetch and display suggestions
+        function fetchSuggestions(endpoint, query, datalist) {
+            fetch(`${endpoint}?query=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    datalist.innerHTML = '';
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item;
+                        datalist.appendChild(option);
+                    });
+                });
+        }
+
+        document.getElementById('dish_category').addEventListener('input', function() {
+            const input = this.value;
+            const datalist = document.getElementById('category-suggestions');
+            fetchSuggestions('/category_suggestions', input, datalist);
+        });
+
+        document.getElementById('cuisine').addEventListener('input', function() {
+            const input = this.value;
+            const datalist = document.getElementById('cuisine-suggestions');
+            fetchSuggestions('/cuisine_suggestions', input, datalist);
+        });
+
+        document.getElementById('ingredients-list').addEventListener('input', function(e) {
+            if (e.target.classList.contains('ingredient-name')) {
+                const ingredientName = e.target;
+                const suggestionsList = ingredientName.parentElement.nextElementSibling;
+                fetch(`/ingredient_suggestions?query=${ingredientName.value}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        suggestionsList.innerHTML = '';
+                        data.suggestions.forEach(suggestion => {
+                            const suggestionItem = document.createElement('li');
+                            suggestionItem.textContent = suggestion;
+                            suggestionItem.addEventListener('click', () => {
+                                ingredientName.value = suggestion;
+                                suggestionsList.innerHTML = '';
+                            });
+                            suggestionsList.appendChild(suggestionItem);
+                        });
+                    });
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('ingredient-name')) {
+                document.querySelectorAll('.suggestions-list').forEach(list => list.innerHTML = '');
+            }
+        });
+    </script>
+{% endblock %}

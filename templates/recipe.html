@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>{{ recipe.name }}</h2>
+    <p><strong>Dish Category:</strong> {{ recipe.dish_category }}</p>
+    <p><strong>Cuisine:</strong> {{ recipe.cuisine }}</p>
+    <p><strong>Cooking Time:</strong> {{ recipe.cooking_time // 60 }} hours {{ recipe.cooking_time % 60 }} minutes</p>
+    <p><strong>Posted By:</strong> {{ recipe.poster.name }}</p>
+
+    <h3>Ingredients</h3>
+    <ul>
+        {% for ingredient in recipe.ingredients %}
+            <li>{{ ingredient.amount }} of {{ ingredient.ingredient.name }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Steps</h3>
+    <pre>{{ recipe.recipe_steps }}</pre>
+
+    <h3>Average Rating: <span class="rating-display">{{ average_rating_stars|safe }}</span> ({{ average_rating }} stars)</h3>
+    <a href="{{ url_for('view_ratings', recipe_id=recipe.id) }}">View all ratings</a>
+
+    <h3>Rate this Recipe</h3>
+    <form action="{{ url_for('rate_recipe', recipe_id=recipe.id) }}" method="post">
+        <div class="form-group">
+            <label for="user_id">User:</label>
+            <select id="user_id" name="user_id" required>
+                <option value="">Select a user</option>
+                {% for user in users %}
+                    <option value="{{ user.username }}">{{ user.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Your Rating:</label>
+            <div class="rating">
+                <input type="radio" name="rating" id="star5" value="5"><label for="star5">&#9733;</label>
+                <input type="radio" name="rating" id="star4" value="4"><label for="star4">&#9733;</label>
+                <input type="radio" name="rating" id="star3" value="3"><label for="star3">&#9733;</label>
+                <input type="radio" name="rating" id="star2" value="2"><label for="star2">&#9733;</label>
+                <input type="radio" name="rating" id="star1" value="1"><label for="star1">&#9733;</label>
+                <input type="radio" name="rating" id="star0" value="0" checked style="display: none;">
+            </div>
+        </div>
+        <button type="submit">Submit Rating</button>
+    </form>
+{% endblock %}
