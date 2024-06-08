@@ -1,0 +1,42 @@
+<!-- all_recipes.html -->
+{% extends 'user_base.html' %}
+
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <h2 class="text-center mb-4">All Recipes</h2>
+                {% if query %}
+                    <p class="text-muted">Search results for: <strong>{{ query }}</strong></p>
+                {% endif %}
+                <div class="search-bar mb-4">
+                    <form action="{{ url_for('search_recipes') }}" method="GET" class="search-form">
+                        <div class="input-group">
+                            <input type="text" name="query" class="form-control" placeholder="Search for recipes" value="{{ query }}">
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-primary">Search</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <ul class="list-group">
+                    {% for recipe in recipes %}
+                        <li class="list-group-item">
+                            <h3>{{ recipe.name }}</h3>
+                            <p><strong>Dish Category:</strong> {{ recipe.dish_category }}</p>
+                            <p><strong>Cuisine:</strong> {{ recipe.cuisine }}</p>
+                            <p><strong>Cooking Time:</strong> {{ recipe.cooking_time }} minutes</p>
+                            <p><strong>Posted By:</strong> {{ recipe.poster.name }}</p>
+                            <a href="{{ url_for('recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">View Recipe</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <div class="text-center mt-4">
+                    <form action="{{ url_for('recipes') }}" method="GET">
+                        <button type="submit" class="btn btn-secondary">Show All Recipes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

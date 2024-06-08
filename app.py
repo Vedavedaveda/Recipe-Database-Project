@@ -1,9 +1,10 @@
 import os
 import json
-from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, session
 from config import Config
 from models import db, User, Recipe, Ingredient, RecipeIngredient, Favourite, Rating
 from datetime import datetime
+import re
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -60,6 +61,22 @@ def import_db():
 
     db.session.commit()
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        user = User.query.filter_by(username=username).first()
+        # Example authentication (replace with your actual authentication logic)
+        if user and user.check_password(password):
+            session['username'] = username  # Store the username in the session
+            return redirect(url_for('user', user_id=user.username))
+        else:
+            return render_template('login.html', error='Invalid username or password')
+
+    return render_template('login.html')
+
 @app.route('/export_db')
 def export_db_route():
     export_db()
@@ -69,12 +86,34 @@ def export_db_route():
 def import_db_route():
     import_db()
     return redirect(url_for('index'))
-
+'''
 @app.route('/')
 def index():
     users = User.query.all()
     recipes = Recipe.query.all()
     return render_template('index.html', users=users, recipes=recipes)
+'''
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+
+@app.route('/recipe')
+def recipes():
+    recipes = Recipe.query.all()
+    return render_template('all_recipes.html', recipes=recipes)
+
+@app.route('/search_recipes', methods=['GET'])
+def search_recipes():
+    query = request.args.get('query', '')
+    if not query:
+        return redirect(url_for('recipes'))  # Redirect to the recipes page if no query is provided
+
+    # Perform the search using regular expressions
+    regex = re.compile(query, re.IGNORECASE)  # Compile the regular expression pattern
+    matched_recipes = [recipe for recipe in Recipe.query.all() if regex.search(recipe.name) or regex.search(recipe.dish_category) or regex.search(recipe.cuisine)]
+
+    return render_template('all_recipes.html', recipes=matched_recipes)
 
 @app.route('/user/<string:user_id>')
 def user(user_id):

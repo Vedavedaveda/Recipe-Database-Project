@@ -5,9 +5,13 @@ db = SQLAlchemy()
 class User(db.Model):
     username = db.Column(db.String(80), primary_key=True, nullable=False)
     name = db.Column(db.String(120), nullable=False)
+    password = db.Column(db.String(128), nullable=False)
     recipes = db.relationship('Recipe', backref='poster', lazy=True)
     favourites = db.relationship('Favourite', backref='user', lazy=True)
     ratings = db.relationship('Rating', backref='user', lazy=True)
+
+    def check_password(self, password):
+        return self.password == password
 
     def __repr__(self):
         return f'<User {self.username}>'
