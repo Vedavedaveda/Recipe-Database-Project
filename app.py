@@ -153,10 +153,11 @@ def add_user():
     if request.method == 'POST':
         username = request.form['username']
         name = request.form['name']
-        new_user = User(username=username, name=name)
+        password = request.form['password']
+        new_user = User(username=username, name=name, password=password)
         db.session.add(new_user)
         db.session.commit()
-        return redirect(url_for('index'))
+        return redirect(url_for('login'))
     return render_template('add_user.html')
 
 @app.route('/add_recipe', methods=['GET', 'POST'])
