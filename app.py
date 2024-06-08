@@ -1,13 +1,21 @@
 import os
 import json
-from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, flash
 from config import Config
 from models import db, User, Recipe, Ingredient, RecipeIngredient, Favourite, Rating
-from datetime import datetime
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(username):
+    return User.query.get(username)
 
 def export_db():
     data = {
@@ -95,8 +103,9 @@ def recipe(recipe_id):
     return render_template('recipe.html', recipe=recipe, average_rating=average_rating, average_rating_stars=average_rating_stars, users=users)
 
 @app.route('/rate_recipe/<int:recipe_id>', methods=['POST'])
+@login_required
 def rate_recipe(recipe_id):
-    user_id = request.form['user_id']
+    user_id = current_user.username
     rating_value = int(request.form['rating'])
     existing_rating = Rating.query.filter_by(user_id=user_id, recipe_id=recipe_id).first()
 
@@ -114,13 +123,58 @@ def add_user():
     if request.method == 'POST':
         username = request.form['username']
         name = request.form['name']
-        new_user = User(username=username, name=name)
+        password = request.form['password']
+        hashed_password = generate_password_hash(password, method='sha256')
+
+        new_user = User(username=username, name=name, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        return redirect(url_for('index'))
+
+        flash('User registered successfully!')
+        return redirect(url_for('login'))
     return render_template('add_user.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        name = request.form['name']
+        password = request.form['password']
+        hashed_password = generate_password_hash(password, method='sha256')
+
+        new_user = User(username=username, name=name, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash('User registered successfully!')
+        return redirect(url_for('login'))
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.get(username)
+
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            flash('Logged in successfully!')
+            return redirect(url_for('index'))
+        else:
+            flash('Login failed. Check your username and password.')
+
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.')
+    return redirect(url_for('login'))
+
 @app.route('/add_recipe', methods=['GET', 'POST'])
+@login_required
 def add_recipe():
     if request.method == 'POST':
         name = request.form['name']
@@ -129,9 +183,8 @@ def add_recipe():
         cooking_time_hours = int(request.form['cooking_time_hours'])
         cooking_time_minutes = int(request.form['cooking_time_minutes'])
         cooking_time = cooking_time_hours * 60 + cooking_time_minutes
-        user_id = request.form['user_id']
+        user_id = current_user.username
 
-        # Combine steps into a single text entry with step numbers
         steps = request.form.getlist('step_description')
         recipe_steps = "\n".join([f"Step {i+1}: {step}" for i, step in enumerate(steps)])
 
@@ -139,7 +192,6 @@ def add_recipe():
         db.session.add(new_recipe)
         db.session.commit()
 
-        # Adding ingredients to the recipe
         ingredients = request.form.getlist('ingredient_name')
         amounts = request.form.getlist('ingredient_amount')
         for ingredient_name, amount in zip(ingredients, amounts):
@@ -194,12 +246,21 @@ def view_ratings(recipe_id):
     ratings = Rating.query.filter_by(recipe_id=recipe_id).all()
     return render_template('view_ratings.html', recipe=recipe, ratings=ratings)
 
-@app.route('/wipe_db')
-def wipe_db():
-    db.drop_all()
-    db.create_all()
-    return "Database wiped and recreated!"
+@app.route('/add_sample_data')
+def add_sample_data():
+    user1 = User(username='john_doe', name='John Doe', password=generate_password_hash('password', method='sha256'))
+    user2 = User(username='jane_doe', name='Jane Doe', password=generate_password_hash('password', method='sha256'))
+    db.session.add(user1)
+    db.session.add(user2)
+    db.session.commit()
 
+    recipe1 = Recipe(name='Spaghetti Carbonara', dish_category='Main', cuisine='Italian', cooking_time=30, recipe_steps='Step 1: Boil pasta.\nStep 2: Cook pancetta.\nStep 3: Mix eggs and cheese.', user_id='john_doe')
+    recipe2 = Recipe(name='Tomato Soup', dish_category='Appetizer', cuisine='American', cooking_time=25, recipe_steps='Step 1: Cook onions.\nStep 2: Add tomatoes.\nStep 3: Blend soup.', user_id='jane_doe')
+    db.session.add(recipe1)
+    db.session.add(recipe2)
+    db.session.commit()
+
+    return "Sample data added!"
 
 if __name__ == '__main__':
     with app.app_context():

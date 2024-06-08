@@ -1,10 +1,12 @@
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
 
 db = SQLAlchemy()
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     username = db.Column(db.String(80), primary_key=True, nullable=False)
     name = db.Column(db.String(120), nullable=False)
+    password = db.Column(db.String(128), nullable=False)  # Ensure passwords are hashed
     recipes = db.relationship('Recipe', backref='poster', lazy=True)
     favourites = db.relationship('Favourite', backref='user', lazy=True)
     ratings = db.relationship('Rating', backref='user', lazy=True)
