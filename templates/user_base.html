@@ -11,7 +11,7 @@
         <h1>Recipe App</h1>
         <nav>
             <a href="{{ url_for('user', user_id=session.username) }}">Home</a>
-            <a href="{{ url_for('recipes') }}">Recipes</a>
+            <a href="{{ url_for('recipes', user_id = session.username) }}">Recipes</a>
             <a href="{{ url_for('add_recipe') }}">Add Recipe</a>
         </nav>
     </header>

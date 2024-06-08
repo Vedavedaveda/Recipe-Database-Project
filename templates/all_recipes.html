@@ -27,12 +27,12 @@
                             <p><strong>Cuisine:</strong> {{ recipe.cuisine }}</p>
                             <p><strong>Cooking Time:</strong> {{ recipe.cooking_time }} minutes</p>
                             <p><strong>Posted By:</strong> {{ recipe.poster.name }}</p>
-                            <a href="{{ url_for('recipe', recipe_id=recipe.id) }}" class="btn btn-outline-primary btn-sm">View Recipe</a>
+                            <a href="{{ url_for('recipe', recipe_id=recipe.id, user_id = session.username) }}" class="btn btn-outline-primary btn-sm">View Recipe</a>
                         </li>
                     {% endfor %}
                 </ul>
                 <div class="text-center mt-4">
-                    <form action="{{ url_for('recipes') }}" method="GET">
+                    <form action="{{ url_for('recipes', user_id = session.username) }}" method="GET">
                         <button type="submit" class="btn btn-secondary">Show All Recipes</button>
                     </form>
                 </div>

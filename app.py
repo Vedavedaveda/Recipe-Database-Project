@@ -98,10 +98,11 @@ def home():
     return render_template('home.html')
 
 
-@app.route('/recipe')
-def recipes():
+@app.route('/user/<string:user_id>/recipe')
+def recipes(user_id):
     recipes = Recipe.query.all()
-    return render_template('all_recipes.html', recipes=recipes)
+    user = User.query.get_or_404(user_id)
+    return render_template('all_recipes.html', recipes=recipes, user=user)
 
 @app.route('/search_recipes', methods=['GET'])
 def search_recipes():
@@ -120,8 +121,9 @@ def user(user_id):
     user = User.query.get_or_404(user_id)
     return render_template('user.html', user=user)
 
-@app.route('/recipe/<int:recipe_id>')
-def recipe(recipe_id):
+@app.route('/user/<string:user_id>/recipe/<int:recipe_id>')
+def recipe(user_id, recipe_id):
+    user = User.query.get_or_404(user_id)
     recipe = Recipe.query.get_or_404(recipe_id)
     ratings = Rating.query.filter_by(recipe_id=recipe_id).all()
     users = User.query.all()
