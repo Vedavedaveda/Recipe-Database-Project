@@ -7,5 +7,5 @@
             <li>{{ rating.user.username }}: {{ rating.rating }} star{{ 's' if rating.rating != 1 else '' }}</li>
         {% endfor %}
     </ul>
-    <a href="{{ url_for('recipe', recipe_id=recipe.id) }}">Back to Recipe</a>
+    <a href="{{ url_for('recipe', recipe_id=recipe.id, user_id = session.username) }}">Back to Recipe</a>
 {% endblock %}

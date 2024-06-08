@@ -119,25 +119,25 @@ def search_recipes():
 @app.route('/user/<string:user_id>')
 def user(user_id):
     user = User.query.get_or_404(user_id)
-    return render_template('user.html', user=user)
+    favorites = Favourite.query.filter_by(user_id = user_id).all()
+    return render_template('user.html', user=user, favorites = favorites)
 
 @app.route('/user/<string:user_id>/recipe/<int:recipe_id>')
 def recipe(user_id, recipe_id):
     user = User.query.get_or_404(user_id)
     recipe = Recipe.query.get_or_404(recipe_id)
     ratings = Rating.query.filter_by(recipe_id=recipe_id).all()
-    users = User.query.all()
     if ratings:
         average_rating = sum(r.rating for r in ratings) / len(ratings)
         average_rating_stars = ''.join(['&#9733;' if i < round(average_rating) else '&#9734;' for i in range(5)])
     else:
         average_rating = 0
         average_rating_stars = '&#9734;&#9734;&#9734;&#9734;&#9734;'
-    return render_template('recipe.html', recipe=recipe, average_rating=average_rating, average_rating_stars=average_rating_stars, users=users)
+    return render_template('recipe.html', recipe=recipe, average_rating=average_rating, average_rating_stars=average_rating_stars)
 
-@app.route('/rate_recipe/<int:recipe_id>', methods=['POST'])
-def rate_recipe(recipe_id):
-    user_id = request.form['user_id']
+@app.route('/user/<string:user_id>/rate_recipe/<int:recipe_id>', methods=['POST'])
+def rate_recipe(user_id, recipe_id):
+    #user_id = request.form['user_id']
     rating_value = int(request.form['rating'])
     existing_rating = Rating.query.filter_by(user_id=user_id, recipe_id=recipe_id).first()
 
@@ -148,7 +148,18 @@ def rate_recipe(recipe_id):
         db.session.add(new_rating)
 
     db.session.commit()
-    return redirect(url_for('recipe', recipe_id=recipe_id))
+    return redirect(url_for('recipe', recipe_id=recipe_id, user_id = user_id))
+
+@app.route('/user/<string:user_id>/rate_recipe/<int:recipe_id>/add_to_favorites', methods=['POST'])
+def add_to_favorites(user_id, recipe_id):
+    if request.method == 'POST':
+        is_favourite = Favourite.query.filter_by(user_id=user_id, recipe_id=recipe_id).first()
+        if not is_favourite:
+            favorite = Favourite(user_id=user_id, recipe_id=recipe_id)
+            db.session.add(favorite)
+        db.session.commit()
+        
+        return redirect(url_for('recipe', recipe_id=recipe_id, user_id = user_id))
 
 @app.route('/add_user', methods=['GET', 'POST'])
 def add_user():
@@ -247,3 +258,4 @@ if __name__ == '__main__':
     with app.app_context():
         import_db()  # Load data from file if it exists
     app.run(debug=True)
+    
