@@ -2,7 +2,7 @@
 
 {% block content %}
     <h2>Add Recipe</h2>
-    <form id="recipe-form" action="{{ url_for('add_recipe') }}" method="post">
+    <form id="recipe-form" action="{{ url_for('add_recipe', user_id = session.username) }}" method="post">
         <label for="name">Recipe Name:</label>
         <input type="text" id="name" name="name" required autocomplete="off">
         <div class="input-row">
@@ -24,12 +24,6 @@
                 <input type="number" id="cooking_time_minutes" name="cooking_time_minutes" placeholder="Minutes" min="0" max="59" required autocomplete="off">
             </div>
         </div>
-        <label for="user_id">Posted By:</label>
-        <select id="user_id" name="user_id" required autocomplete="off">
-            {% for user in users %}
-                <option value="{{ user.username }}">{{ user.name }}</option>
-            {% endfor %}
-        </select>
         
         <h3>Ingredients</h3>
         <div id="ingredients-list">
@@ -60,7 +54,37 @@
     </form>
 
     <script>
-        document.addEventListener('click', function(e) {
+        function fetchSuggestions(endpoint, query, datalist) {
+            fetch(`${endpoint}?query=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    datalist.innerHTML = '';
+                    data.suggestions.forEach(item => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = item;
+                        listItem.addEventListener('click', function() {
+                            const inputField = datalist.parentElement.querySelector('input');
+                            inputField.value = item;
+                            datalist.innerHTML = '';
+                        });
+                        datalist.appendChild(listItem);
+                    });
+                });
+        }
+
+        document.getElementById('dish_category').addEventListener('input', function() {
+            const input = this.value;
+            const datalist = document.getElementById('category-suggestions');
+            fetchSuggestions('/category_suggestions', input, datalist);
+        });
+
+        document.getElementById('cuisine').addEventListener('input', function() {
+            const input = this.value;
+            const datalist = document.getElementById('cuisine-suggestions');
+            fetchSuggestions('/cuisine_suggestions', input, datalist);
+        });
+
+        document.getElementById('ingredients-list').addEventListener('click', function(e) {
             if (e.target.classList.contains('add-ingredient')) {
                 const ingredientEntry = document.createElement('div');
                 ingredientEntry.className = 'ingredient-entry';
@@ -79,7 +103,9 @@
             if (e.target.classList.contains('remove-ingredient')) {
                 e.target.parentElement.parentElement.remove();
             }
+        });
 
+        document.getElementById('steps-list').addEventListener('click', function(e) {
             if (e.target.classList.contains('add-step')) {
                 const stepsList = document.getElementById('steps-list');
                 const stepEntries = stepsList.getElementsByClassName('step-entry');
@@ -104,38 +130,11 @@
         });
 
         function updateStepNumbers() {
-            const stepsList = document.getElementById('steps-list');
-            const stepNumbers = stepsList.getElementsByClassName('step-number');
-            for (let i = 0; i < stepNumbers.length; i++) {
-                stepNumbers[i].textContent = (i + 1) + '.';
-            }
+            const stepNumbers = document.querySelectorAll('.step-number');
+            stepNumbers.forEach((number, index) => {
+                number.textContent = index + 1 + '.';
+            });
         }
-
-        // Function to fetch and display suggestions
-        function fetchSuggestions(endpoint, query, datalist) {
-            fetch(`${endpoint}?query=${query}`)
-                .then(response => response.json())
-                .then(data => {
-                    datalist.innerHTML = '';
-                    data.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item;
-                        datalist.appendChild(option);
-                    });
-                });
-        }
-
-        document.getElementById('dish_category').addEventListener('input', function() {
-            const input = this.value;
-            const datalist = document.getElementById('category-suggestions');
-            fetchSuggestions('/category_suggestions', input, datalist);
-        });
-
-        document.getElementById('cuisine').addEventListener('input', function() {
-            const input = this.value;
-            const datalist = document.getElementById('cuisine-suggestions');
-            fetchSuggestions('/cuisine_suggestions', input, datalist);
-        });
 
         document.getElementById('ingredients-list').addEventListener('input', function(e) {
             if (e.target.classList.contains('ingredient-name')) {

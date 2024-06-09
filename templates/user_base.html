@@ -12,7 +12,8 @@
         <nav>
             <a href="{{ url_for('user', user_id=session.username) }}">Home</a>
             <a href="{{ url_for('recipes', user_id = session.username) }}">Recipes</a>
-            <a href="{{ url_for('add_recipe') }}">Add Recipe</a>
+            <a href="{{ url_for('add_recipe', user_id = session.username) }}">Add Recipe</a>
+            <a href="{{ url_for('home') }}">Logout</a>
         </nav>
     </header>
     <main>

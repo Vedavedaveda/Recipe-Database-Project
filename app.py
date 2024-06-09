@@ -1,6 +1,9 @@
 import os
 import json
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, session
+from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy_views import CreateView, DropView
+from sqlalchemy.sql import text
 from config import Config
 from models import db, User, Recipe, Ingredient, RecipeIngredient, Favourite, Rating
 from datetime import datetime
@@ -9,6 +12,7 @@ import re
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+engine = create_engine('sqlite:///instance/yourdatabase.db')
 
 def export_db():
     data = {
@@ -19,7 +23,7 @@ def export_db():
         'favourites': [f.__dict__ for f in Favourite.query.all()],
         'ratings': [r.__dict__ for r in Rating.query.all()]
     }
-    # Remove the '_sa_instance_state' key added by SQLAlchemy
+
     for table in data.values():
         for entry in table:
             entry.pop('_sa_instance_state', None)
@@ -60,6 +64,20 @@ def import_db():
         db.session.add(rating)
 
     db.session.commit()
+
+
+def create_database_views():
+    definition = text("SELECT id, name, dish_category, cuisine, avg_rating FROM recipe LEFT JOIN (SELECT recipe_id, AVG(rating) AS avg_rating FROM rating GROUP BY recipe_id) AS r ON r.recipe_id = recipe.id")
+    with engine.connect() as connection:
+        # Execute your query using the connection
+        view_drop = text(f"DROP VIEW my_view")
+        connection.execute(view_drop)
+        view_query = text(f"CREATE VIEW IF NOT EXISTS my_view AS {definition} ")
+        connection.execute(view_query)
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    export_db()
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -120,7 +138,12 @@ def search_recipes():
 def user(user_id):
     user = User.query.get_or_404(user_id)
     favorites = Favourite.query.filter_by(user_id = user_id).all()
-    return render_template('user.html', user=user, favorites = favorites)
+    with engine.connect() as connection:
+        # Execute your query using the connection
+        view_query = text("SELECT * FROM my_view ORDER BY avg_rating DESC LIMIT 5")
+        popular_recipes = connection.execute(view_query).fetchall()
+
+    return render_template('user.html', user=user, favorites = favorites, popular_recipes = popular_recipes)
 
 @app.route('/user/<string:user_id>/recipe/<int:recipe_id>')
 def recipe(user_id, recipe_id):
@@ -137,7 +160,6 @@ def recipe(user_id, recipe_id):
 
 @app.route('/user/<string:user_id>/rate_recipe/<int:recipe_id>', methods=['POST'])
 def rate_recipe(user_id, recipe_id):
-    #user_id = request.form['user_id']
     rating_value = int(request.form['rating'])
     existing_rating = Rating.query.filter_by(user_id=user_id, recipe_id=recipe_id).first()
 
@@ -157,7 +179,7 @@ def add_to_favorites(user_id, recipe_id):
         if not is_favourite:
             favorite = Favourite(user_id=user_id, recipe_id=recipe_id)
             db.session.add(favorite)
-        db.session.commit()
+            db.session.commit()
         
         return redirect(url_for('recipe', recipe_id=recipe_id, user_id = user_id))
 
@@ -173,8 +195,8 @@ def add_user():
         return redirect(url_for('login'))
     return render_template('add_user.html')
 
-@app.route('/add_recipe', methods=['GET', 'POST'])
-def add_recipe():
+@app.route('/user/<string:user_id>/add_recipe', methods=['GET', 'POST'])
+def add_recipe(user_id):
     if request.method == 'POST':
         name = request.form['name']
         dish_category = request.form['dish_category']
@@ -182,7 +204,7 @@ def add_recipe():
         cooking_time_hours = int(request.form['cooking_time_hours'])
         cooking_time_minutes = int(request.form['cooking_time_minutes'])
         cooking_time = cooking_time_hours * 60 + cooking_time_minutes
-        user_id = request.form['user_id']
+        #user_id = request.form['user_id']
 
         # Combine steps into a single text entry with step numbers
         steps = request.form.getlist('step_description')
@@ -205,9 +227,9 @@ def add_recipe():
             db.session.add(recipe_ingredient)
             db.session.commit()
 
-        return redirect(url_for('index'))
-    users = User.query.all()
-    return render_template('add_recipe.html', users=users)
+        return redirect(url_for('user', user_id = user_id))
+    #users = User.query.all()
+    return render_template('add_recipe.html')
 
 @app.route('/ingredient_suggestions')
 def ingredient_suggestions():
@@ -222,27 +244,27 @@ def ingredient_suggestions():
 def category_suggestions():
     query = request.args.get('query', '')
     if query:
-        suggestions = Recipe.query.filter(Recipe.dish_category.ilike(f'%{query}%')).distinct().all()
-        category_list = [category.dish_category for category in suggestions]
-        return jsonify(category_list)
-    return jsonify([])
+        suggestions = db.session.query(Recipe.dish_category).filter(Recipe.dish_category.ilike(f'%{query}%')).distinct().all()
+        category_list = [category[0] for category in suggestions]
+        return jsonify(suggestions=category_list)
+    return jsonify(suggestions=[])
 
 @app.route('/cuisine_suggestions')
 def cuisine_suggestions():
     query = request.args.get('query', '')
     if query:
-        suggestions = Recipe.query.filter(Recipe.cuisine.ilike(f'%{query}%')).distinct().all()
-        cuisine_list = [cuisine.cuisine for cuisine in suggestions]
-        return jsonify(cuisine_list)
-    return jsonify([])
+        suggestions = db.session.query(Recipe.cuisine).filter(Recipe.cuisine.ilike(f'%{query}%')).distinct().all()
+        cuisine_list = [cuisine[0] for cuisine in suggestions]
+        return jsonify(suggestions=cuisine_list)
+    return jsonify(suggestions=[])
 
 @app.route('/ingredients')
 def ingredients():
     ingredients = Ingredient.query.all()
     return render_template('ingredients.html', ingredients=ingredients)
 
-@app.route('/view_ratings/<int:recipe_id>')
-def view_ratings(recipe_id):
+@app.route('/user/<string:user_id>/view_ratings/<int:recipe_id>')
+def view_ratings(user_id, recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     ratings = Rating.query.filter_by(recipe_id=recipe_id).all()
     return render_template('view_ratings.html', recipe=recipe, ratings=ratings)
@@ -257,5 +279,5 @@ def wipe_db():
 if __name__ == '__main__':
     with app.app_context():
         import_db()  # Load data from file if it exists
+        create_database_views()
     app.run(debug=True)
-    
