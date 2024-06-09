@@ -8,11 +8,8 @@ In order to run the app, you need to run the following commands in the terminal:
 
 ```python -m venv venv```
 
-MAC:
-```source venv/bin/activate```
+MAC: ```source venv/bin/activate```, WINDOWS: ```.\venv\Scripts\activate```
 
-WINDOWS:
-```.\venv\Scripts\activate```
 
 ```pip install flask```
 
