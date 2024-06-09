@@ -2,6 +2,16 @@
 
 This project is a web app that manages and interacts with a database that contains informatino about recipes, users, and ingredients. We used Flask and SQLAlchemy.
 
+In order to run the app, you need to run the following commands in the terminal:
+
+```pip install flask```
+
+```pip install flask-sqlalchemy```
+
+```pip install sqlalchemy_views```
+
+```python app.py```
+
 Since we used an ORM tool, we will now briefly show that we know where and how our webapp interacts with our database:
 
 **Select:** To display all recipes, we use the following code to perform a select query to retrive all recipes from the database
