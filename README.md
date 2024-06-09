@@ -4,6 +4,16 @@ This project is a web app that manages and interacts with a database that contai
 
 In order to run the app, you need to run the following commands in the terminal:
 
+```pip install virtualenv```
+
+```python -m venv venv```
+
+MAC:
+```source venv/bin/activate```
+
+WINDOWS:
+```.\venv\Scripts\activate```
+
 ```pip install flask```
 
 ```pip install flask-sqlalchemy```
@@ -11,6 +21,9 @@ In order to run the app, you need to run the following commands in the terminal:
 ```pip install sqlalchemy_views```
 
 ```python app.py```
+
+
+##### ORM
 
 Since we used an ORM tool, we will now briefly show that we know where and how our webapp interacts with our database:
 
